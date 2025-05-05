@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from numpy import log, sqrt, exp  # Make sure to import these
 import matplotlib.pyplot as plt
 import seaborn as sns
+import yfinance as yf
 
 #######################
 # Page configuration
@@ -124,10 +125,29 @@ class BlackScholes:
 with st.sidebar:
     st.title("📊 Black-Scholes Model")
     st.write("`Created by:`")
-    linkedin_url = "https://www.linkedin.com/in/mprudhvi/"
-    st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">`Prudhvi Reddy, Muppala`</a>', unsafe_allow_html=True)
+    linkedin_url = "https://www.linkedin.com/in/joseph-fori-5393a7128/"
+    st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">Fori Joseph</a>', unsafe_allow_html=True)
 
-    current_price = st.number_input("Current Asset Price", value=100.0)
+    st.write("`Inspred by:`")
+    linkedin_url = "https://www.linkedin.com/in/mprudhvi/"
+    st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">Prudhvi Reddy</a>', unsafe_allow_html=True)
+
+
+    st.markdown("### 📈 Real-Time Data Fetcher")
+    ticker = st.text_input("Enter Ticker Symbol (e.g., AAPL, MSFT, TSLA)", value="AAPL")
+
+    current_price = 1    
+
+    if st.button("Fetch Market Data"):
+        try:
+           stock = yf.Ticker(ticker)
+           hist = stock.history(period="1mo")
+           current_price = round(hist['Close'].iloc[-1], 2)
+           st.success(f"Fetched current price: ${current_price}")
+        except Exception as e:
+           st.error(f"Failed to fetch data: {e}")
+
+    current_price = st.number_input("Current Asset Price", value=current_price)
     strike = st.number_input("Strike Price", value=100.0)
     time_to_maturity = st.number_input("Time to Maturity (Years)", value=1.0)
     volatility = st.number_input("Volatility (σ)", value=0.2)
@@ -164,14 +184,14 @@ def plot_heatmap(bs_model, spot_range, vol_range, strike):
     
     # Plotting Call Price Heatmap
     fig_call, ax_call = plt.subplots(figsize=(10, 8))
-    sns.heatmap(call_prices, xticklabels=np.round(spot_range, 2), yticklabels=np.round(vol_range, 2), annot=True, fmt=".2f", cmap="viridis", ax=ax_call)
+    sns.heatmap(call_prices, xticklabels=np.round(spot_range, 2), yticklabels=np.round(vol_range, 2), annot=True, fmt=".2f", cmap="RdYlGn_r", ax=ax_call)
     ax_call.set_title('CALL')
     ax_call.set_xlabel('Spot Price')
     ax_call.set_ylabel('Volatility')
     
     # Plotting Put Price Heatmap
     fig_put, ax_put = plt.subplots(figsize=(10, 8))
-    sns.heatmap(put_prices, xticklabels=np.round(spot_range, 2), yticklabels=np.round(vol_range, 2), annot=True, fmt=".2f", cmap="viridis", ax=ax_put)
+    sns.heatmap(put_prices, xticklabels=np.round(spot_range, 2), yticklabels=np.round(vol_range, 2), annot=True, fmt=".2f", cmap="RdYlGn_r", ax=ax_put)
     ax_put.set_title('PUT')
     ax_put.set_xlabel('Spot Price')
     ax_put.set_ylabel('Volatility')
