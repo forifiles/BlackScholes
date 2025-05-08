@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import plotly.graph_objects as go
-from numpy import log, sqrt, exp  # Make sure to import these
+from numpy import log, sqrt, exp
 import matplotlib.pyplot as plt
 import seaborn as sns
 import yfinance as yf
@@ -60,8 +60,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# (Include the BlackScholes class definition here)
-
+# BlackScholes class definition
 class BlackScholes:
     def __init__(
         self,
@@ -118,53 +117,6 @@ class BlackScholes:
         return call_price, put_price
 
 # Function to generate heatmaps
-# ... your existing imports and BlackScholes class definition ...
-
-
-# Sidebar for User Inputs
-with st.sidebar:
-    st.title("📊 Black-Scholes Model")
-    st.write("`Created by:`")
-    linkedin_url = "https://www.linkedin.com/in/joseph-fori-5393a7128/"
-    st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">Fori Joseph</a>', unsafe_allow_html=True)
-
-    st.write("`Inspred by:`")
-    linkedin_url = "https://www.linkedin.com/in/mprudhvi/"
-    st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">Prudhvi Reddy</a>', unsafe_allow_html=True)
-
-
-    st.markdown("### 📈 Real-Time Data Fetcher")
-    ticker = st.text_input("Enter Ticker Symbol (e.g., AAPL, MSFT, TSLA)", value="AAPL")
-
-    current_price = 1    
-
-    if st.button("Fetch Market Data"):
-        try:
-           stock = yf.Ticker(ticker)
-           hist = stock.history(period="1mo")
-           current_price = round(hist['Close'].iloc[-1], 2)
-           st.success(f"Fetched current price: ${current_price}")
-        except Exception as e:
-           st.error(f"Failed to fetch data: {e}")
-
-    current_price = st.number_input("Current Asset Price", value=current_price)
-    strike = st.number_input("Strike Price", value=100.0)
-    time_to_maturity = st.number_input("Time to Maturity (Years)", value=1.0)
-    volatility = st.number_input("Volatility (σ)", value=0.2)
-    interest_rate = st.number_input("Risk-Free Interest Rate", value=0.05)
-
-    st.markdown("---")
-    calculate_btn = st.button('Heatmap Parameters')
-    spot_min = st.number_input('Min Spot Price', min_value=0.01, value=current_price*0.8, step=0.01)
-    spot_max = st.number_input('Max Spot Price', min_value=0.01, value=current_price*1.2, step=0.01)
-    vol_min = st.slider('Min Volatility for Heatmap', min_value=0.01, max_value=1.0, value=volatility*0.5, step=0.01)
-    vol_max = st.slider('Max Volatility for Heatmap', min_value=0.01, max_value=1.0, value=volatility*1.5, step=0.01)
-    
-    spot_range = np.linspace(spot_min, spot_max, 10)
-    vol_range = np.linspace(vol_min, vol_max, 10)
-
-
-
 def plot_heatmap(bs_model, spot_range, vol_range, strike):
     call_prices = np.zeros((len(vol_range), len(spot_range)))
     put_prices = np.zeros((len(vol_range), len(spot_range)))
@@ -199,22 +151,113 @@ def plot_heatmap(bs_model, spot_range, vol_range, strike):
     return fig_call, fig_put
 
 
+# Initialize session state variables
+if 'fetched_price' not in st.session_state:
+    st.session_state.fetched_price = 150.0  # Default price
+if 'fetched_vol' not in st.session_state:
+    st.session_state.fetched_vol = 0.2  # Default volatility
+if 'last_ticker' not in st.session_state:
+    st.session_state.last_ticker = ""
+if 'current_price' not in st.session_state:
+    st.session_state.current_price = 150.0
+if 'strike' not in st.session_state:
+    st.session_state.strike = 100.0
+if 'time_to_maturity' not in st.session_state:
+    st.session_state.time_to_maturity = 1.0
+if 'volatility' not in st.session_state:
+    st.session_state.volatility = 0.2
+if 'interest_rate' not in st.session_state:
+    st.session_state.interest_rate = 0.05
+
+# Sidebar for User Inputs
+with st.sidebar:
+    st.title("📊 Black-Scholes Model")
+    st.write("`Created by:`")
+    linkedin_url = "https://www.linkedin.com/in/joseph-fori-5393a7128/"
+    st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">Fori Joseph</a>', unsafe_allow_html=True)
+
+    st.write("`Inspred by:`")
+    linkedin_url = "https://www.linkedin.com/in/mprudhvi/"
+    st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">Prudhvi Reddy</a>', unsafe_allow_html=True)
+
+    # Input: Ticker Symbol
+    st.sidebar.markdown("### 📈 Real-Time Market Data")
+    ticker = st.sidebar.text_input("Enter Ticker Symbol", value="AAPL")
+
+    # Only fetch if ticker changed
+    if ticker != st.session_state.last_ticker:
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="6mo")
+
+            if not hist.empty:
+                # Price
+                current_price = hist['Close'].iloc[-1]
+                st.session_state.fetched_price = round(current_price, 2)
+
+                # Volatility from log returns
+                hist['LogReturn'] = np.log(hist['Close'] / hist['Close'].shift(1))
+                daily_vol = hist['LogReturn'].std()
+                annual_vol = round(daily_vol * np.sqrt(252), 4)
+                st.session_state.fetched_vol = annual_vol
+
+                st.session_state.last_ticker = ticker
+                st.sidebar.success(f"Fetched: ${current_price:.2f}, Vol: {annual_vol:.2%}")
+            else:
+                st.sidebar.warning("No data available.")
+
+        except Exception as e:
+            st.sidebar.error(f"Error fetching data: {e}")
+
+    # Let user adjust, pre-filled with fetched values
+    st.session_state.current_price = st.sidebar.number_input(
+        "Current Asset Price", value=st.session_state.fetched_price
+    )
+    st.session_state.strike = st.number_input(
+        "Strike Price", value=st.session_state.strike
+    )
+    st.session_state.time_to_maturity = st.number_input(
+        "Time to Maturity (Years)", value=st.session_state.time_to_maturity
+    )
+    st.session_state.volatility = st.sidebar.number_input(
+        "Volatility (σ)", value=st.session_state.fetched_vol
+    )
+    st.session_state.interest_rate = st.number_input(
+        "Risk-Free Interest Rate", value=st.session_state.interest_rate
+    )
+
+    st.markdown("---")
+    calculate_btn = st.button('Heatmap Parameters')
+    spot_min = st.number_input('Min Spot Price', min_value=0.01, value=st.session_state.current_price*0.8, step=0.01)
+    spot_max = st.number_input('Max Spot Price', min_value=0.01, value=st.session_state.current_price*1.2, step=0.01)
+    vol_min = st.slider('Min Volatility for Heatmap', min_value=0.01, max_value=1.0, value=st.session_state.volatility*0.5, step=0.01)
+    vol_max = st.slider('Max Volatility for Heatmap', min_value=0.01, max_value=1.0, value=st.session_state.volatility*1.5, step=0.01)
+    
+    spot_range = np.linspace(spot_min, spot_max, 10)
+    vol_range = np.linspace(vol_min, vol_max, 10)
+
 # Main Page for Output Display
 st.title("Black-Scholes Pricing Model")
 
 # Table of Inputs
 input_data = {
-    "Current Asset Price": [current_price],
-    "Strike Price": [strike],
-    "Time to Maturity (Years)": [time_to_maturity],
-    "Volatility (σ)": [volatility],
-    "Risk-Free Interest Rate": [interest_rate],
+    "Current Asset Price": [st.session_state.current_price],
+    "Strike Price": [st.session_state.strike],
+    "Time to Maturity (Years)": [st.session_state.time_to_maturity],
+    "Volatility (σ)": [st.session_state.volatility],
+    "Risk-Free Interest Rate": [st.session_state.interest_rate],
 }
 input_df = pd.DataFrame(input_data)
 st.table(input_df)
 
 # Calculate Call and Put values
-bs_model = BlackScholes(time_to_maturity, strike, current_price, volatility, interest_rate)
+bs_model = BlackScholes(
+    st.session_state.time_to_maturity, 
+    st.session_state.strike, 
+    st.session_state.current_price, 
+    st.session_state.volatility, 
+    st.session_state.interest_rate
+)
 call_price, put_price = bs_model.calculate_prices()
 
 # Display Call and Put Values in colored tables
@@ -251,10 +294,10 @@ col1, col2 = st.columns([1,1], gap="small")
 
 with col1:
     st.subheader("Call Price Heatmap")
-    heatmap_fig_call, _ = plot_heatmap(bs_model, spot_range, vol_range, strike)
+    heatmap_fig_call, _ = plot_heatmap(bs_model, spot_range, vol_range, st.session_state.strike)
     st.pyplot(heatmap_fig_call)
 
 with col2:
     st.subheader("Put Price Heatmap")
-    _, heatmap_fig_put = plot_heatmap(bs_model, spot_range, vol_range, strike)
+    _, heatmap_fig_put = plot_heatmap(bs_model, spot_range, vol_range, st.session_state.strike)
     st.pyplot(heatmap_fig_put)
